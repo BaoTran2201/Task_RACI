@@ -1,0 +1,57 @@
+[
+  {
+    "id": "109315df-9e58-4b04-93b5-403fd1c418d0",
+    "name": "bảo",
+    "department": "CSKH",
+    "position": "Trưởng phòng CSKH 2",
+    "managerId": null,
+    "createdAt": "2026-01-06 15:36:39.162814+07",
+    "updatedAt": "2026-01-06 15:36:39.162855+07",
+    "departmentId": "78bde289-d78a-466a-aee3-798419484d41",
+    "positionId": "a1b7177e-be8f-4227-aa1d-16f1fdc6d77b"
+  },
+  {
+    "id": "e06c8024-a359-4ebb-a9ad-ff98a7977646",
+    "name": "Trần Gia Bảo",
+    "department": "CSKH",
+    "position": "Triển khai",
+    "managerId": null,
+    "createdAt": "2026-01-06 15:46:19.278978+07",
+    "updatedAt": "2026-01-06 15:46:19.293483+07",
+    "departmentId": "78bde289-d78a-466a-aee3-798419484d41",
+    "positionId": "df5690a9-efce-4a33-a004-3554f38207ed"
+  },
+  {
+    "id": "10b8e50f-9a6f-49bb-a831-343f095d6d1f",
+    "name": "Trần Ngọc Long",
+    "department": "CSKH",
+    "position": "Triển khai",
+    "managerId": null,
+    "createdAt": "2026-01-06 15:46:19.281402+07",
+    "updatedAt": "2026-01-06 15:46:19.297137+07",
+    "departmentId": "78bde289-d78a-466a-aee3-798419484d41",
+    "positionId": "df5690a9-efce-4a33-a004-3554f38207ed"
+  },
+  {
+    "id": "e2df1ff3-7a89-46ed-8d72-4f1f3e7d37ae",
+    "name": "Trần Xuân Thi",
+    "department": "IT",
+    "position": "Triển khai",
+    "managerId": "10b8e50f-9a6f-49bb-a831-343f095d6d1f",
+    "createdAt": "2026-01-12 11:01:13.274574+07",
+    "updatedAt": "2026-01-12 11:01:13.301826+07",
+    "departmentId": "8448a249-8887-4f60-a593-618672de5b99",
+    "positionId": "df5690a9-efce-4a33-a004-3554f38207ed"
+  },
+  {
+    "id": "c2ad38b6-45d5-4082-a161-9eb5ea50aae5",
+    "name": "Võ Hoàng Phi",
+    "department": "Sales",
+    "position": "Triển khai",
+    "managerId": "10b8e50f-9a6f-49bb-a831-343f095d6d1f",
+    "createdAt": "2026-01-12 11:01:13.281354+07",
+    "updatedAt": "2026-01-12 11:01:13.316219+07",
+    "departmentId": "3065e03c-4483-4141-8cf5-91d8e92c2495",
+    "positionId": "df5690a9-efce-4a33-a004-3554f38207ed"
+  }
+]

@@ -1,0 +1,90 @@
+[
+  {
+    "id": "57de4227-cd3d-4a3b-b923-f989685dedd2",
+    "username": "john.doe",
+    "password": "100000.wVxUXHjUsj4ypOQ0HgmMuQ==.1pmaQnVBKH1m5PXvAWgHByu+G66MyjxdyoqRBmXzM5Y=",
+    "role": "User",
+    "employeeId": null,
+    "createdAt": "2026-01-06 10:26:10.419494+07",
+    "updatedAt": "2026-01-06 10:26:10.419494+07",
+    "isActive": false,
+    "isStaff": true
+  },
+  {
+    "id": "fd4826bc-f664-444c-987f-60a6117cb433",
+    "username": "admin",
+    "password": "100000.MqoJdSrg3Pusch+/1d0Iyg==.mD4txX5oGM1I0YP1uhuJ30fYK8YwsPtU6yRN35ZQKHw=",
+    "role": 1,
+    "employeeId": null,
+    "createdAt": "2026-01-06 10:26:10.068453+07",
+    "updatedAt": "2026-01-06 10:26:10.06849+07",
+    "isActive": false,
+    "isStaff": true
+  },
+  {
+    "id": "b9aa7a25-41d5-42ec-83cf-7e685748fa60",
+    "username": "tran.gia.bao",
+    "password": "100000.ePSdkmdXwNV6GJaqfIubtg==.TYwWc9jpJNAkza5X/UY45829a7uFU/YNYW/1Jv7Oaeo=",
+    "role": "User",
+    "employeeId": "e06c8024-a359-4ebb-a9ad-ff98a7977646",
+    "createdAt": "2026-01-07 09:20:01.033703+07",
+    "updatedAt": "2026-01-07 09:20:01.033704+07",
+    "isActive": true,
+    "isStaff": true
+  },
+  {
+    "id": "048bc87a-a8af-4f7d-9eec-889231f4188b",
+    "username": "tran.ngoc.long",
+    "password": "100000.OYCRs1N9FnbDbSm9nlTctA==.VXnWvHTJwJkmx8i3Kn3XHH89bcqIA4Hf/BLbywLVnJM=",
+    "role": "User",
+    "employeeId": "10b8e50f-9a6f-49bb-a831-343f095d6d1f",
+    "createdAt": "2026-01-07 13:44:49.102309+07",
+    "updatedAt": "2026-01-07 13:44:49.10231+07",
+    "isActive": true,
+    "isStaff": true
+  },
+  {
+    "id": "13d7030f-ac56-423f-a03c-744bf9da3f9b",
+    "username": "bao",
+    "password": "100000.ONQl9AzRNWfIiykLwcfkWQ==.Sxlc7HF1ORyzubbs+3NSnMh5JMoNAwu5qATC5B/f3Js=",
+    "role": "User",
+    "employeeId": null,
+    "createdAt": "2026-01-07 09:17:44.338253+07",
+    "updatedAt": "2026-01-07 09:17:44.338254+07",
+    "isActive": true,
+    "isStaff": true
+  },
+  {
+    "id": "260531bb-21e5-4325-9cc0-deeb01249299",
+    "username": "tran.xuan.thi",
+    "password": "100000.rY6R8PXFH4OEjhvbNJkNBg==.rk9wYRNliso+PoUpPgPbdsjvxUQGTB1qkEcsJxDjDY4=",
+    "role": "User",
+    "employeeId": "e2df1ff3-7a89-46ed-8d72-4f1f3e7d37ae",
+    "createdAt": "2026-01-12 11:01:21.641383+07",
+    "updatedAt": "2026-01-12 11:01:21.641384+07",
+    "isActive": true,
+    "isStaff": true
+  },
+  {
+    "id": "09444819-83c9-44d9-ba5b-c2e9f555cced",
+    "username": "vo.hoang.phi",
+    "password": "100000.W/917H3b6TZu2Xr2N8mzGg==.XghUvQGNLcKgfoAT0sNu9IvBRSCNld9sF8XHl7visj0=",
+    "role": "User",
+    "employeeId": "c2ad38b6-45d5-4082-a161-9eb5ea50aae5",
+    "createdAt": "2026-01-12 11:01:24.850514+07",
+    "updatedAt": "2026-01-12 11:01:24.850514+07",
+    "isActive": true,
+    "isStaff": true
+  },
+  {
+    "id": "be421be4-7ab8-4dd4-b0be-193b6d5bb13f",
+    "username": "bao1",
+    "password": "100000.j+EasfVZn0bNNildSR0wjQ==.gz6AMxIfVFMNTugwXC41iNHIn4Gn8nTE8gLDUSSd5jg=",
+    "role": "User",
+    "employeeId": "109315df-9e58-4b04-93b5-403fd1c418d0",
+    "createdAt": "2026-01-12 11:01:32.944489+07",
+    "updatedAt": "2026-01-12 11:01:32.94449+07",
+    "isActive": true,
+    "isStaff": true
+  }
+]

@@ -42,7 +42,7 @@ export async function loadAll(isAdmin: boolean = true): Promise<{ employees: Emp
     // Always load departments and positions from API (even in demo mode for now)
     let departments: Department[] = [];
     let positions: Position[] = [];
-    
+
     try {
       const deptApi = await departmentApi.getAll();
       departments = deptApi.map((d) => ({
@@ -53,7 +53,7 @@ export async function loadAll(isAdmin: boolean = true): Promise<{ employees: Emp
     } catch (err) {
       console.warn('Failed to load departments from API, using fallback:', err);
       // Fallback: try loading from JSON
-      const departmentsJson = await loadJsonData<any[]>('master/departments.json');
+      const departmentsJson = await loadJsonData<any[]>('departments.json');
       departments = (Array.isArray(departmentsJson) ? departmentsJson : departmentsJson || []).map((d: any) => ({
         id: d.id,
         name: d.name,
@@ -72,7 +72,7 @@ export async function loadAll(isAdmin: boolean = true): Promise<{ employees: Emp
     } catch (err) {
       console.warn('Failed to load positions from API, using fallback:', err);
       // Fallback: try loading from JSON
-      const positionsJson = await loadJsonData<any[]>('master/positions.json');
+      const positionsJson = await loadJsonData<any[]>('positions.json');
       positions = (Array.isArray(positionsJson) ? positionsJson : positionsJson || []).map((p: any) => ({
         id: p.id,
         name: p.name,
@@ -188,16 +188,16 @@ export async function loadAll(isAdmin: boolean = true): Promise<{ employees: Emp
  */
 function parseTaskFrequency(value: any): TaskFrequency {
   if (!value) return TaskFrequency.Daily;
-  
+
   // Try backend enum mapping first
   if (BACKEND_FREQ_MAP[value]) return BACKEND_FREQ_MAP[value];
-  
+
   // Try legacy Vietnamese labels
   if (LEGACY_FREQ_LABELS[value]) return LEGACY_FREQ_LABELS[value];
-  
+
   // Try as is (in case it's already an enum value)
   if (Object.values(TaskFrequency).includes(value)) return value;
-  
+
   // Default
   return TaskFrequency.Daily;
 }

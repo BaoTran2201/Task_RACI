@@ -40,16 +40,16 @@ export const loadDemoData = async (): Promise<{
 }> => {
   try {
     const [empRes, projRes, taskRes, raciRes] = await Promise.all([
-      fetch('/data/demo/employees.demo.json'),
-      fetch('/data/demo/projects.demo.json'),
-      fetch('/data/demo/tasks.demo.json'),
-      fetch('/data/demo/raci.demo.json'),
+      fetch('/data/employees.json'),
+      fetch('/data/projects.json'),
+      fetch('/data/tasks.json'),
+      fetch('/data/raci_assignments.json'),
     ]);
 
-    const employees = (await empRes.json()).employees || [];
-    const projects = (await projRes.json()).projects || [];
-    const tasks = (await taskRes.json()).tasks || [];
-    const raciData = (await raciRes.json()).raci || [];
+    const employees = await empRes.json();
+    const projects = await projRes.json();
+    const tasks = await taskRes.json();
+    const raciData = await raciRes.json();
 
     return { employees, projects, tasks, raciData };
   } catch (error) {

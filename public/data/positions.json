@@ -1,0 +1,42 @@
+[
+  {
+    "id": "a1b7177e-be8f-4227-aa1d-16f1fdc6d77b",
+    "name": "Trưởng phòng CSKH 2",
+    "canManage": true,
+    "active": true,
+    "createdAt": "2026-01-06 15:20:33.081179+07",
+    "updatedAt": "2026-01-06 15:20:33.081212+07"
+  },
+  {
+    "id": "fed7f0c4-76e3-40f1-b4b4-f8e5680f2001",
+    "name": "Trưởng phòng CSKH",
+    "canManage": true,
+    "active": true,
+    "createdAt": "2026-01-06 14:18:06.441955+07",
+    "updatedAt": "2026-01-06 15:39:30.325207+07"
+  },
+  {
+    "id": "bdc607b6-df97-4213-9d37-ac6654e3a6f2",
+    "name": "AI Transformation leader",
+    "canManage": true,
+    "active": true,
+    "createdAt": "2026-01-12 08:41:03.981329+07",
+    "updatedAt": "2026-01-12 08:41:03.981416+07"
+  },
+  {
+    "id": "1fcbbd39-9686-4109-a3e7-30295185df08",
+    "name": "AI Transformation",
+    "canManage": false,
+    "active": true,
+    "createdAt": "2026-01-12 08:41:48.533833+07",
+    "updatedAt": "2026-01-12 08:41:48.533833+07"
+  },
+  {
+    "id": "df5690a9-efce-4a33-a004-3554f38207ed",
+    "name": "Triển khai",
+    "canManage": true,
+    "active": true,
+    "createdAt": "2026-01-06 14:35:13.777283+07",
+    "updatedAt": "2026-01-06 15:39:29.696815+07"
+  }
+]
