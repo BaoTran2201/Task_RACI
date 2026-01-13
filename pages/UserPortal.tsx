@@ -3,8 +3,8 @@ import { Card, Button, Badge, RaciChip, Modal, Input, Select } from '../componen
 import { Employee, Project, Task, RaciMatrix, Role, Position } from '../types';
 import { RaciRole, TaskFrequency, TaskFrequencyLabels } from '../src/types/enums';
 import { CheckSquare, Clock, Plus, Edit2, User, Briefcase, Filter, ChevronRight, Users, UserPlus, Search } from 'lucide-react';
-import { EditableMyTasksTable } from './EditableMyTasksTable';
-import { raciApi, employeeApi } from '../src/services/api';
+import { raciApi, employeeApi, taskApi } from '../src/services/api';
+import { InlineEditCell } from '../components/InlineEditCell';
 
 // --- PROPS INTERFACE ---
 interface UserPortalProps {
@@ -140,8 +140,8 @@ const TabsHeader: React.FC<{ activeTab: 'projects' | 'raci'; onChange: (tab: 'pr
             key={tab.key}
             onClick={() => onChange(tab.key)}
             className={`whitespace - nowrap px - 4 py - 2 text - sm font - semibold rounded - t - lg border - b - 2 transition - colors ${isActive
-                ? 'text-blue-600 border-blue-500 bg-blue-50'
-                : 'text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50'
+              ? 'text-blue-600 border-blue-500 bg-blue-50'
+              : 'text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50'
               } `}
           >
             {tab.label}
@@ -645,8 +645,8 @@ const TabRaciView: React.FC<{
                                       disabled={isTaskRoleLoading(task.id, `remove - ${position.id} `) || !!disabledReason}
                                       title={disabledReason || 'Xóa'}
                                       className={`font - bold text - sm leading - none ${isTaskRoleLoading(task.id, `remove-${position.id}`) || disabledReason
-                                          ? 'text-white/40 cursor-not-allowed'
-                                          : 'text-white/80 hover:text-white cursor-pointer'
+                                        ? 'text-white/40 cursor-not-allowed'
+                                        : 'text-white/80 hover:text-white cursor-pointer'
                                         } `}
                                       style={{ pointerEvents: 'auto' }}
                                     >
@@ -665,8 +665,8 @@ const TabRaciView: React.FC<{
                                 disabled={isTaskRoleLoading(task.id, `${role} -add`) || !canAddRole(task.id, role)}
                                 title={getActionDisabledReason(task.id, role, 'add') || 'Thêm'}
                                 className={`inline - flex items - center justify - center w - 7 h - 7 rounded - full border - 2 border - dashed transition - colors font - bold ${isTaskRoleLoading(task.id, `${role}-add`) || !canAddRole(task.id, role)
-                                    ? 'border-slate-200 text-slate-300 cursor-not-allowed'
-                                    : 'border-slate-300 text-slate-400 hover:border-slate-500 hover:text-slate-600 cursor-pointer'
+                                  ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                                  : 'border-slate-300 text-slate-400 hover:border-slate-500 hover:text-slate-600 cursor-pointer'
                                   } `}
                                 style={{ pointerEvents: 'auto', zIndex: 10 }}
                               >
@@ -744,17 +744,38 @@ const TabRaciView: React.FC<{
                     </td>
                   </tr>
                   {expandedGroups.has(groupName) && groupTasks.map((task, index) => (
-                    <tr key={task.id} className={`hover: bg - blue - 50 transition - colors ${index !== groupTasks.length - 1 ? 'border-b border-slate-100' : 'border-b border-slate-200'} `}>
-                      <td className="px-6 py-4 border-r border-slate-100">
-                        <div>
-                          <div className="font-semibold text-slate-900">{task.name}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center border-r border-slate-100">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                          {TaskFrequencyLabels[task.frequency as TaskFrequency] || task.frequency}
-                        </span>
-                      </td>
+                    <tr key={task.id} className={`hover:bg-blue-50 transition-colors ${index !== groupTasks.length - 1 ? 'border-b border-slate-100' : 'border-b border-slate-200'}`}>
+                      <InlineEditCell
+                        mode="text"
+                        value={task.name}
+                        onSave={async (v) => {
+                          if (v && v !== task.name) {
+                            await taskApi.update(task.id, { name: v });
+                            const refreshed = await taskApi.getAll();
+                            _setTasks(refreshed);
+                          }
+                        }}
+                        className="px-6 py-4 border-r border-slate-100"
+                        display={(v) => <div className="font-semibold text-slate-900">{v}</div>}
+                      />
+                      <InlineEditCell
+                        mode="select"
+                        value={task.frequency}
+                        options={Object.entries(TaskFrequencyLabels).map(([k, v]) => ({ value: k, label: v }))}
+                        onSave={async (v) => {
+                          if (v && v !== task.frequency) {
+                            await taskApi.update(task.id, { frequency: v as any });
+                            const refreshed = await taskApi.getAll();
+                            _setTasks(refreshed);
+                          }
+                        }}
+                        className="px-6 py-4 text-center border-r border-slate-100"
+                        display={(v) => (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                            {TaskFrequencyLabels[v as TaskFrequency] || v}
+                          </span>
+                        )}
+                      />
                       <td className="px-6 py-4 text-center border-r border-slate-100">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                           ~{computePeriodHours(task).toFixed(1)}h
@@ -785,8 +806,8 @@ const TabRaciView: React.FC<{
                                       disabled={isTaskRoleLoading(task.id, `remove - ${position.id} `) || !!disabledReason}
                                       title={disabledReason || 'Xóa'}
                                       className={`ml - 1 font - bold text - sm leading - none ${isTaskRoleLoading(task.id, `remove-${position.id}`) || disabledReason
-                                          ? 'text-white/40 cursor-not-allowed'
-                                          : 'text-white/80 hover:text-white cursor-pointer'
+                                        ? 'text-white/40 cursor-not-allowed'
+                                        : 'text-white/80 hover:text-white cursor-pointer'
                                         } `}
                                       style={{ pointerEvents: 'auto' }}
                                     >
@@ -805,8 +826,8 @@ const TabRaciView: React.FC<{
                                 disabled={isTaskRoleLoading(task.id, `${role} -add`) || !canAddRole(task.id, role)}
                                 title={getActionDisabledReason(task.id, role, 'add') || 'Thêm'}
                                 className={`inline - flex items - center justify - center w - 7 h - 7 rounded - full border - 2 border - dashed transition - colors font - bold ${isTaskRoleLoading(task.id, `${role}-add`) || !canAddRole(task.id, role)
-                                    ? 'border-slate-200 text-slate-300 cursor-not-allowed'
-                                    : 'border-slate-300 text-slate-400 hover:border-slate-500 hover:text-slate-600 cursor-pointer'
+                                  ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                                  : 'border-slate-300 text-slate-400 hover:border-slate-500 hover:text-slate-600 cursor-pointer'
                                   } `}
                                 style={{ pointerEvents: 'auto', zIndex: 10 }}
                               >
@@ -1010,8 +1031,8 @@ const MyRaci: React.FC<UserPortalProps> = ({ currentUser, tasks, raciData, proje
             key={role}
             onClick={() => setActiveTab(role)}
             className={`px - 6 py - 2 text - sm font - bold rounded - t - lg transition - colors border - b - 2 ${activeTab === role
-                ? (role === 'R' ? 'text-red-600 border-red-500 bg-red-50' : role === 'A' ? 'text-amber-600 border-amber-500 bg-amber-50' : role === 'C' ? 'text-cyan-600 border-cyan-500 bg-cyan-50' : 'text-slate-600 border-slate-500 bg-slate-50')
-                : 'text-slate-500 border-transparent hover:text-slate-700'
+              ? (role === 'R' ? 'text-red-600 border-red-500 bg-red-50' : role === 'A' ? 'text-amber-600 border-amber-500 bg-amber-50' : role === 'C' ? 'text-cyan-600 border-cyan-500 bg-cyan-50' : 'text-slate-600 border-slate-500 bg-slate-50')
+              : 'text-slate-500 border-transparent hover:text-slate-700'
               } `}
           >
             {role === 'R' && 'Responsible (Người làm)'}
@@ -1251,8 +1272,8 @@ const RaciEditor = ({ task, currentUser, employees, raciData, setRaciData, onClo
                     key={role}
                     onClick={() => updateRole(emp.primaryPositionId || emp.positionId || emp.id, currentRole === role ? 'NONE' : role as Role)}
                     className={`w - 8 h - 8 rounded - full text - xs font - bold transition - all ${currentRole === role ?
-                        (role === 'R' ? 'bg-red-500 text-white shadow-md scale-110' : role === 'A' ? 'bg-amber-500 text-white shadow-md scale-110' : role === 'C' ? 'bg-cyan-500 text-white shadow-md scale-110' : 'bg-slate-500 text-white shadow-md scale-110')
-                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                      (role === 'R' ? 'bg-red-500 text-white shadow-md scale-110' : role === 'A' ? 'bg-amber-500 text-white shadow-md scale-110' : role === 'C' ? 'bg-cyan-500 text-white shadow-md scale-110' : 'bg-slate-500 text-white shadow-md scale-110')
+                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                       } `}
                   >
                     {role}

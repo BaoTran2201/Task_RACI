@@ -55,14 +55,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const hasUser = localStorage.getItem('raci_user');
-    const hasToken = localStorage.getItem(TOKEN_KEY);
-    // Disable demo mode whenever a real session exists so data loads from backend
-    if (hasUser && hasToken) {
-      setDemoMode(false);
-    } else {
-      setDemoMode(true);
-    }
+    // Keep demo mode enabled so local persistence overrides work
+    setDemoMode(true);
   }, []);
 
   useEffect(() => {

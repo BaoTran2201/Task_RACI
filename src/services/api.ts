@@ -56,29 +56,25 @@ async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
       data = await res.json();
     }
 
-    if (isDemoMode()) {
-      const overrides = loadDemoOverrides();
-      if (baseJsonPath === 'tasks' && overrides.tasks) {
-        // Merge tasks: overrides should replace by ID
-        const taskMap = new Map((data as any[]).map(t => [t.id, t]));
-        overrides.tasks.forEach((t: any) => taskMap.set(t.id, t));
-        return Array.from(taskMap.values()) as any as T;
-      }
-      if (baseJsonPath === 'raci_assignments' && overrides.raciData) {
-        // For RACI, overrides are often the FULL new state or we merge them
-        // Let's treat raciData override as the source of truth if it exists
-        return overrides.raciData as any as T;
-      }
-      if (baseJsonPath === 'employees' && overrides.employees) {
-        const empMap = new Map((data as any[]).map(e => [e.id, e]));
-        overrides.employees.forEach((e: any) => empMap.set(e.id, e));
-        return Array.from(empMap.values()) as any as T;
-      }
-      if (baseJsonPath === 'projects' && overrides.projects) {
-        const projMap = new Map((data as any[]).map(p => [p.id, p]));
-        overrides.projects.forEach((p: any) => projMap.set(p.id, p));
-        return Array.from(projMap.values()) as any as T;
-      }
+    // MERGE OVERRIDES FOR PERSISTENCE (Always do this in this Vercel demo environment)
+    const overrides = loadDemoOverrides();
+    if (baseJsonPath === 'tasks' && overrides.tasks) {
+      const taskMap = new Map((data as any[]).map(t => [t.id, t]));
+      overrides.tasks.forEach((t: any) => taskMap.set(t.id, t));
+      return Array.from(taskMap.values()) as any as T;
+    }
+    if (baseJsonPath === 'raci_assignments' && overrides.raciData) {
+      return overrides.raciData as any as T;
+    }
+    if (baseJsonPath === 'employees' && overrides.employees) {
+      const empMap = new Map((data as any[]).map(e => [e.id, e]));
+      overrides.employees.forEach((e: any) => empMap.set(e.id, e));
+      return Array.from(empMap.values()) as any as T;
+    }
+    if (baseJsonPath === 'projects' && overrides.projects) {
+      const projMap = new Map((data as any[]).map(p => [p.id, p]));
+      overrides.projects.forEach((p: any) => projMap.set(p.id, p));
+      return Array.from(projMap.values()) as any as T;
     }
 
     return data as T;
@@ -212,30 +208,32 @@ export const taskApi = {
    * @returns Updated task from backend
    */
   async update(id: string, request: UpdateTaskRequest): Promise<Task> {
-    if (isDemoMode()) {
-      const overrides = loadDemoOverrides();
-      const demoData = await loadDemoData();
-      const existing = overrides.tasks || demoData.tasks || [];
-      const next = existing.map((t: Task) => (t.id === id ? { ...t, ...request } : t));
-      persistDemoOverrides({ tasks: next });
-      const updated = next.find((t: Task) => t.id === id) as Task;
-      return Promise.resolve(updated);
+    const overrides = loadDemoOverrides();
+    const demoData = await loadDemoData();
+    const existing = overrides.tasks || demoData.tasks || [];
+    const next = existing.map((t: Task) => (t.id === id ? { ...t, ...request } : t));
+    persistDemoOverrides({ tasks: next });
+
+    // Fallback to backend update if NOT in demo mode, but for this environment we prioritize local
+    if (!isDemoMode()) {
+      const payload: Record<string, any> = {};
+      if (request.name !== undefined) payload.name = request.name;
+      if (request.frequency !== undefined) payload.frequency = request.frequency;
+      if (request.projectId !== undefined) payload.projectId = request.projectId;
+      if (request.groupName !== undefined) payload.groupName = request.groupName;
+      if (request.note !== undefined) payload.note = request.note;
+      if (request.partner !== undefined) payload.partner = request.partner;
+      if (request.estimatedHours !== undefined) payload.estimatedHours = request.estimatedHours;
+
+      try {
+        await apiRequest<Task>(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } catch (e) {
+        console.warn('Backend update failed, using local persistence only', e);
+      }
     }
 
-    // CRITICAL: Only send fields matching backend UpdateTaskDto
-    const payload: Record<string, any> = {};
-    if (request.name !== undefined) payload.name = request.name;
-    if (request.frequency !== undefined) payload.frequency = request.frequency;
-    if (request.projectId !== undefined) payload.projectId = request.projectId;
-    if (request.groupName !== undefined) payload.groupName = request.groupName;
-    if (request.note !== undefined) payload.note = request.note;
-    if (request.partner !== undefined) payload.partner = request.partner;
-    if (request.estimatedHours !== undefined) payload.estimatedHours = request.estimatedHours;
-
-    return apiRequest<Task>(`/tasks/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
+    const updated = next.find((t: Task) => t.id === id) as Task;
+    return Promise.resolve(updated);
   },
 
   async delete(id: string): Promise<void> {
@@ -372,42 +370,38 @@ export const raciApi = {
    * @returns Created RACI assignment
    */
   async create(request: CreateRaciRequest): Promise<RaciMatrix> {
-    // Runtime validation: ensure role is valid
     if (!isValidRaciRole(request.role)) {
       throw new Error(`Invalid RACI role: ${request.role}. Must be: R, A, C, or I`);
     }
 
-    if (isDemoMode()) {
-      const overrides = loadDemoOverrides();
-      const demoData = await loadDemoData();
-      const existing = overrides.raciData || demoData.raciData || [];
-      const positions = await positionApi.getAll();
-      const pos = positions.find(p => p.id === request.positionId);
+    const overrides = loadDemoOverrides();
+    const demoData = await loadDemoData();
+    const existing = overrides.raciData || demoData.raciData || [];
+    const positions = await positionApi.getAll();
+    const pos = positions.find(p => String(p.id) === String(request.positionId));
 
-      const newRaci: RaciMatrix = {
-        id: `R${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        taskId: request.taskId,
-        positionId: request.positionId,
-        positionName: pos?.name || '[Missing Position]',
-        role: request.role,
-        employeeId: '', // Employee mapping happens in datastore.ts normalize logic usually
-      };
-
-      const next = [...existing, newRaci];
-      persistDemoOverrides({ raciData: next });
-      return Promise.resolve(newRaci);
-    }
-
-    const payload = {
+    const newRaci: RaciMatrix = {
+      id: `R${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       taskId: request.taskId,
       positionId: request.positionId,
+      positionName: pos?.name || '[Missing Position]',
       role: request.role,
+      employeeId: '',
     };
 
-    return apiRequest<RaciMatrix>('/raci', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    const next = [...existing, newRaci];
+    persistDemoOverrides({ raciData: next });
+
+    if (!isDemoMode()) {
+      const payload = { taskId: request.taskId, positionId: request.positionId, role: request.role };
+      try {
+        await apiRequest<RaciMatrix>('/raci', { method: 'POST', body: JSON.stringify(payload) });
+      } catch (e) {
+        console.warn('Backend create failed, using local persistence only', e);
+      }
+    }
+
+    return Promise.resolve(newRaci);
   },
 
   /**
@@ -417,83 +411,83 @@ export const raciApi = {
    * @returns Updated RACI assignment
    */
   async update(id: number | string, request: UpdateRaciRequest): Promise<RaciMatrix> {
-    // Runtime validation: ensure role is valid
     if (!isValidRaciRole(request.role)) {
       throw new Error(`Invalid RACI role: ${request.role}. Must be: R, A, C, or I`);
     }
 
-    if (isDemoMode()) {
-      const overrides = loadDemoOverrides();
-      const demoData = await loadDemoData();
-      const existing = overrides.raciData || demoData.raciData || [];
-      const next = existing.map((r: RaciMatrix) => (String(r.id) === String(id) ? { ...r, role: request.role } : r));
-      persistDemoOverrides({ raciData: next });
-      const updated = next.find((r: RaciMatrix) => String(r.id) === String(id)) as RaciMatrix;
-      return Promise.resolve(updated);
+    const overrides = loadDemoOverrides();
+    const demoData = await loadDemoData();
+    const existing = overrides.raciData || demoData.raciData || [];
+    const next = existing.map((r: RaciMatrix) => (String(r.id) === String(id) ? { ...r, role: request.role } : r));
+    persistDemoOverrides({ raciData: next });
+
+    if (!isDemoMode()) {
+      try {
+        await apiRequest<RaciMatrix>(`/raci/${id}`, { method: 'PUT', body: JSON.stringify({ role: request.role }) });
+      } catch (e) {
+        console.warn('Backend update failed, using local persistence only', e);
+      }
     }
 
-    const payload = {
-      role: request.role, // Enum: R, A, C, I
-    };
-
-    return apiRequest<RaciMatrix>(`/raci/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
+    const updated = next.find((r: RaciMatrix) => String(r.id) === String(id)) as RaciMatrix;
+    return Promise.resolve(updated);
   },
 
   async delete(id: number | string): Promise<void> {
-    if (isDemoMode()) {
-      const overrides = loadDemoOverrides();
-      const demoData = await loadDemoData();
-      const existing = overrides.raciData || demoData.raciData || [];
-      const next = existing.filter((r: RaciMatrix) => String(r.id) !== String(id));
-      persistDemoOverrides({ raciData: next });
-      return Promise.resolve();
+    const overrides = loadDemoOverrides();
+    const demoData = await loadDemoData();
+    const existing = overrides.raciData || demoData.raciData || [];
+    const next = existing.filter((r: RaciMatrix) => String(r.id) !== String(id));
+    persistDemoOverrides({ raciData: next });
+
+    if (!isDemoMode()) {
+      try {
+        await apiRequest<void>(`/raci/${id}`, { method: 'DELETE' });
+      } catch (e) {
+        console.warn('Backend delete failed, using local persistence only', e);
+      }
     }
-    return apiRequest<void>(`/raci/${id}`, {
-      method: 'DELETE',
-    });
   },
 
   async updateRaciForTask(taskId: string, assignments: RaciMatrix[]): Promise<RaciMatrix[]> {
-    if (isDemoMode()) {
-      const overrides = loadDemoOverrides();
-      const demoData = await loadDemoData();
-      const existing = overrides.raciData || demoData.raciData || [];
+    const overrides = loadDemoOverrides();
+    const demoData = await loadDemoData();
+    const existing = overrides.raciData || demoData.raciData || [];
 
-      // Remove all existing RACI for this task
-      const filtered = existing.filter((r: RaciMatrix) => r.taskId !== taskId);
+    // Remove all existing RACI for this task
+    const filtered = existing.filter((r: RaciMatrix) => r.taskId === taskId);
 
-      // Add new ones
-      const positions = await positionApi.getAll();
-      const newAssignments = assignments.map((a, idx) => {
-        const pos = positions.find(p => p.id === a.positionId);
-        return {
-          ...a,
-          id: a.id || `R${Date.now()}-${idx}`,
-          positionName: pos?.name || a.positionName || '[Missing Position]',
-        };
-      });
+    // Add new ones
+    const positions = await positionApi.getAll();
+    const newAssignments = assignments.map((a, idx) => {
+      const pos = positions.find(p => String(p.id) === String(a.positionId));
+      return {
+        ...a,
+        id: a.id || `R${Date.now()}-${idx}`,
+        positionName: pos?.name || a.positionName || '',
+      };
+    });
 
-      const next = [...filtered, ...newAssignments];
-      persistDemoOverrides({ raciData: next });
-      return Promise.resolve(newAssignments);
+    const next = [...filtered, ...newAssignments];
+    persistDemoOverrides({ raciData: next });
+
+    if (!isDemoMode()) {
+      const payload = {
+        taskId,
+        assignments: assignments.map(a => ({
+          positionId: a.positionId,
+          role: a.role,
+          employeeId: a.employeeId,
+        })),
+      };
+      try {
+        await apiRequest<RaciMatrix[]>(`/raci/task/${taskId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } catch (e) {
+        console.warn('Backend bulk update failed, using local persistence only', e);
+      }
     }
 
-    const payload = {
-      taskId,
-      assignments: assignments.map(a => ({
-        positionId: a.positionId,
-        role: a.role,
-        employeeId: a.employeeId,
-      })),
-    };
-
-    return apiRequest<RaciMatrix[]>(`/raci/task/${taskId}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
+    return Promise.resolve(newAssignments);
   },
 };
 
