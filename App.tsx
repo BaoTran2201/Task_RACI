@@ -139,7 +139,7 @@ export default function App() {
 
       // Switch off demo data once authenticated
       setDemoMode(false);
-      
+
       // Store authentication data
       setUserRole(role);
       setUsername(data.username);
@@ -312,9 +312,10 @@ export default function App() {
         <UserPortal
           view={
             currentPage === Page.USER_DASHBOARD ? 'dashboard' :
-            currentPage === Page.USER_MY_TASKS ? 'my_tasks' :
-            currentPage === Page.USER_MY_RACI ? 'my_raci' :
-            currentPage === Page.USER_PROFILE ? 'profile' : 'dashboard'
+              currentPage === Page.USER_MY_TASKS ? 'my_tasks' :
+                currentPage === Page.USER_MY_RACI ? 'my_raci' :
+                  currentPage === Page.USER_PROFILE ? 'profile' :
+                    currentPage === Page.USER_EMPLOYEES ? 'employees' : 'dashboard'
           }
           currentUser={currentUser}
           employees={employees}
@@ -327,6 +328,7 @@ export default function App() {
           onNavigate={(view) => {
             if (view === 'my_tasks') setCurrentPage(Page.USER_MY_TASKS);
             else if (view === 'add_task') setCurrentPage(Page.USER_ADD_TASK);
+            else if (view === 'employees') setCurrentPage(Page.USER_EMPLOYEES);
           }}
         />
       );

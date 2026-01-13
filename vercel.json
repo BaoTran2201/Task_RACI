@@ -1,13 +1,13 @@
 {
   "rewrites": [
     {
-      "source": "/data/(.*)",
-      "destination": "/data/$1"
+      "source": "/public/data/(.*)",
+      "destination": "/public/data/$1"
     }
   ],
   "headers": [
     {
-      "source": "/data/(.*)",
+      "source": "/public/data/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

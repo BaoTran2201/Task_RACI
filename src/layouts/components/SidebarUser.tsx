@@ -4,6 +4,7 @@ import {
   CheckSquare,
   Plus,
   User as UserIcon,
+  Users,
   LogOut,
 } from 'lucide-react';
 import { Page } from '../../../types';
@@ -24,8 +25,9 @@ const menuItems = [
     items: [
       { page: Page.USER_DASHBOARD, label: 'Tổng quan của tôi', icon: LayoutDashboard },
       { page: Page.USER_ADD_TASK, label: 'Thêm Task', icon: Plus },
-      { page: Page.USER_MY_TASKS, label: 'Task của tôi', icon: CheckSquare },     
+      { page: Page.USER_MY_TASKS, label: 'Task của tôi', icon: CheckSquare },
       { page: Page.USER_PROFILE, label: 'Thông tin cá nhân', icon: UserIcon },
+     
     ],
   },
 ];
@@ -67,11 +69,10 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
                 <button
                   key={page}
                   onClick={() => handleNavClick(page)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    currentPage === page
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${currentPage === page
                       ? 'menu-item-active'
                       : 'text-slate-700 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <Icon size={18} className="flex-shrink-0" />
                   <span>{label}</span>

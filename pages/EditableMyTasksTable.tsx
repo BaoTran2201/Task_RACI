@@ -30,11 +30,19 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
   setTasks,
   setRaciData,
 }) => {
-    console.log('[EditableMyTasksTable] Filtering tasks:', { currentUserId: currentUser.id, currentUserName: currentUser.name, totalTasks: tasks.length });
-  const myTasks = tasks.filter(t => t.creatorId === currentUser.id);
-    console.log('[EditableMyTasksTable] My tasks:', { count: myTasks.length, tasks: myTasks.map(t => ({ name: t.name, creatorId: t.creatorId })) });
-  const [draftTasks, setDraftTasks] = useState<DraftTask[]>(myTasks.map(t => ({ ...t })));
-  const [draftRaci, setDraftRaci] = useState<RaciMatrix[]>(raciData);
+  // We rely on the parent (UserPortal) to filter tasks if needed, 
+  // but EditableMyTasksTable currently filters again. Let's ensure consistency.
+  const [draftTasks, setDraftTasks] = useState<DraftTask[]>([]);
+  const [draftRaci, setDraftRaci] = useState<RaciMatrix[]>([]);
+
+  // Sync with props
+  useEffect(() => {
+    setDraftTasks(tasks.filter(t => t.creatorId === currentUser.id).map(t => ({ ...t })));
+  }, [tasks, currentUser.id]);
+
+  useEffect(() => {
+    setDraftRaci(raciData);
+  }, [raciData]);
   const [editingCellId, setEditingCellId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -61,7 +69,7 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
           const names = Array.isArray(tgJson?.data) ? tgJson.data.map((g: any) => g.name).filter(Boolean) : [];
           if (!cancelled) setGroupMaster(names);
         }
-      } catch {}
+      } catch { }
       try {
         const pRes = await fetch('/data/master/partners.json');
         if (pRes.ok) {
@@ -69,7 +77,7 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
           const names = Array.isArray(pJson?.data) ? pJson.data.map((p: any) => p.name).filter(Boolean) : [];
           if (!cancelled) setPartnerMaster(names);
         }
-      } catch {}
+      } catch { }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -189,20 +197,29 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
         });
       }
 
-      const existingByKey = new Map<string, { id?: number; role: Role }>();
-      raciData.forEach(r => existingByKey.set(`${r.taskId}|${r.positionId}`, { id: typeof r.id === 'number' ? r.id : undefined, role: r.role }));
+      const existingByKey = new Map<string, { id?: string | number; role: Role }>();
+      raciData.forEach(r => {
+        const key = `${r.taskId}|${r.positionId}`;
+        existingByKey.set(key, { id: r.id, role: r.role });
+      });
 
       const desiredKeys = new Set<string>();
       for (const r of draftRaci) {
         const key = `${r.taskId}|${r.positionId}`;
         desiredKeys.add(key);
         const existing = existingByKey.get(key);
+
         if (existing) {
           if (existing.role !== r.role && existing.id !== undefined) {
             await raciApi.update(existing.id, { role: r.role });
           }
         } else {
-          await raciApi.create({ taskId: r.taskId, positionId: r.positionId!, role: r.role });
+          // If we are creating, use positionId from r (which came from handleRaciChange)
+          await raciApi.create({
+            taskId: r.taskId,
+            positionId: r.positionId!,
+            role: r.role as RaciRole
+          });
         }
       }
 
@@ -320,8 +337,7 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
                     key={option.value}
                     value={option.value}
                     className={({ active }) =>
-                      `relative cursor-pointer select-none py-2 pl-10 pr-4 text-sm ${
-                        active ? 'bg-blue-50 text-blue-900' : 'text-slate-900'
+                      `relative cursor-pointer select-none py-2 pl-10 pr-4 text-sm ${active ? 'bg-blue-50 text-blue-900' : 'text-slate-900'
                       }`
                     }
                   >
@@ -386,9 +402,8 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
             onClick={() => setEditingCellId(cellId)}
             className="px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors"
           >
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${
-              value ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'
-            }`}>
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${value ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'
+              }`}>
               {value || '—'}
             </span>
           </td>
@@ -424,8 +439,7 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
                     key={option.value}
                     value={option.value}
                     className={({ active }) =>
-                      `relative cursor-pointer select-none py-2 pl-10 pr-4 text-sm ${
-                        active ? 'bg-blue-50 text-blue-900' : 'text-slate-900'
+                      `relative cursor-pointer select-none py-2 pl-10 pr-4 text-sm ${active ? 'bg-blue-50 text-blue-900' : 'text-slate-900'
                       }`
                     }
                   >
@@ -489,8 +503,7 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
                     key={option.value}
                     value={option.value}
                     className={({ active }) =>
-                      `relative cursor-pointer select-none py-2 pl-10 pr-4 text-sm ${
-                        active ? 'bg-blue-50 text-blue-900' : 'text-slate-900'
+                      `relative cursor-pointer select-none py-2 pl-10 pr-4 text-sm ${active ? 'bg-blue-50 text-blue-900' : 'text-slate-900'
                       }`
                     }
                   >
@@ -560,7 +573,7 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
                 const myRole = draftRaci.find(r => r.taskId === task.id && r.positionId === myPosId)?.role;
 
                 return (
-                  <tr 
+                  <tr
                     key={task.id}
                     className="hover:bg-slate-50 transition-colors"
                   >
@@ -677,7 +690,7 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
                   <Dialog.Title className="text-lg font-semibold text-slate-900 mb-4">
                     Thêm nhóm task
                   </Dialog.Title>
-                  
+
                   <input
                     type="text"
                     autoFocus
@@ -737,7 +750,7 @@ export const EditableMyTasksTable: React.FC<EditableMyTasksTableProps> = ({
                   <Dialog.Title className="text-lg font-semibold text-slate-900 mb-4">
                     Thêm đối tác
                   </Dialog.Title>
-                  
+
                   <input
                     type="text"
                     autoFocus

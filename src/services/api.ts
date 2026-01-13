@@ -1,5 +1,5 @@
 import { Task, RaciMatrix } from '../../types';
-import { isDemoMode, loadDemoOverrides, persistDemoOverrides } from './demoMode';
+import { isDemoMode, loadDemoOverrides, persistDemoOverrides, loadDemoData } from './demoMode';
 import {
   CreateTaskRequest,
   UpdateTaskRequest,
@@ -33,44 +33,60 @@ export const clearAuthToken = () => localStorage.removeItem(TOKEN_KEY);
 export const getStoredToken = () => localStorage.getItem(TOKEN_KEY);
 
 async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = getStoredToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options?.headers,
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const isGet = options?.method === 'GET' || !options?.method;
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  // Completely bypass backend - redirect to JSON files for GET requests
+  if (isGet) {
+    let jsonPath = path.startsWith('/') ? path.slice(1) : path;
 
-  if (res.status === 401) {
-    clearAuthToken();
-    unauthorizedHandler?.();
-    throw new Error('Unauthorized');
-  }
+    // Map API paths to filenames if they differ
+    if (jsonPath.startsWith('raci')) jsonPath = 'raci_assignments';
+    if (jsonPath.startsWith('tasks')) jsonPath = 'tasks';
+    if (jsonPath === 'employees') jsonPath = 'employees';
+    if (jsonPath === 'projects') jsonPath = 'projects';
+    if (jsonPath === 'departments') jsonPath = 'departments';
+    if (jsonPath === 'positions') jsonPath = 'positions';
 
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => '');
-    const errorMessage = errorText || `Request failed (${res.status})`;
-    if (options?.method === 'POST' || options?.method === 'PUT') {
-      console.error('[API ERROR]', {
-        path,
-        method: options?.method,
-        status: res.status,
-        error: errorMessage,
-        body: options?.body
-      });
+    // Remove subpaths for local JSON access (simple mock)
+    const baseJsonPath = jsonPath.split('/')[0];
+
+    const res = await fetch(`/data/${baseJsonPath}.json`);
+    let data: any = [];
+    if (res.ok) {
+      data = await res.json();
     }
-    throw new Error(errorMessage);
+
+    if (isDemoMode()) {
+      const overrides = loadDemoOverrides();
+      if (baseJsonPath === 'tasks' && overrides.tasks) {
+        // Merge tasks: overrides should replace by ID
+        const taskMap = new Map((data as any[]).map(t => [t.id, t]));
+        overrides.tasks.forEach((t: any) => taskMap.set(t.id, t));
+        return Array.from(taskMap.values()) as any as T;
+      }
+      if (baseJsonPath === 'raci_assignments' && overrides.raciData) {
+        // For RACI, overrides are often the FULL new state or we merge them
+        // Let's treat raciData override as the source of truth if it exists
+        return overrides.raciData as any as T;
+      }
+      if (baseJsonPath === 'employees' && overrides.employees) {
+        const empMap = new Map((data as any[]).map(e => [e.id, e]));
+        overrides.employees.forEach((e: any) => empMap.set(e.id, e));
+        return Array.from(empMap.values()) as any as T;
+      }
+      if (baseJsonPath === 'projects' && overrides.projects) {
+        const projMap = new Map((data as any[]).map(p => [p.id, p]));
+        overrides.projects.forEach((p: any) => projMap.set(p.id, p));
+        return Array.from(projMap.values()) as any as T;
+      }
+    }
+
+    return data as T;
   }
 
-  if (res.status === 204) {
-    return undefined as T;
-  }
-
-  return res.json() as Promise<T>;
+  // Mock success for mutations (POST/PUT/DELETE)
+  console.log(`[Mock API] ${options.method} ${path}`, options.body);
+  return Promise.resolve({} as T);
 }
 
 // ============================================================================
@@ -92,24 +108,68 @@ export const taskApi = {
 
     if (isDemoMode()) {
       const overrides = loadDemoOverrides();
-      const existing = overrides.tasks || [];
+      const demoData = await loadDemoData();
+      const existingTasks = overrides.tasks || demoData.tasks || [];
+      const existingRaci = overrides.raciData || demoData.raciData || [];
+      const employees = overrides.employees || demoData.employees || [];
+
+      // Fetch positions using positionApi to get all positions (including those in JSON)
+      const positions = await positionApi.getAll();
+
+      // Find current user's employeeId
+      const storedUser = localStorage.getItem('raci_user');
+      let creatorId = 'demo-user';
+      if (storedUser) {
+        try {
+          const { username } = JSON.parse(storedUser);
+          const emp = employees.find((e: any) => e.username === username);
+          if (emp) creatorId = emp.id;
+        } catch (e) {
+          console.warn('Failed to parse raci_user for creatorId', e);
+        }
+      }
+
+      const taskId = `T${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const newTask: Task = {
-        id: `T${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: taskId,
         groupId: taskDto.groupName || 'default',
         groupName: taskDto.groupName || '',
         name: taskDto.name,
         frequency: taskDto.frequency,
         note: taskDto.note,
-        creatorId: 'demo-user',
+        creatorId,
         projectId: taskDto.projectId,
         partner: taskDto.partner || null,
         estimatedHours: taskDto.estimatedHours ?? 0,
       };
-      const next = [...existing, newTask];
-      persistDemoOverrides({ tasks: next });
+
+      // Handle RACI assignments if present
+      const newRaciEntries: RaciMatrix[] = [];
+      if (taskDto.raciAssignments && taskDto.raciAssignments.length > 0) {
+        taskDto.raciAssignments.forEach((ra, idx) => {
+          const pos = positions.find((p: any) => p.id === ra.positionId);
+          newRaciEntries.push({
+            id: `R${Date.now()}-${idx}`,
+            taskId,
+            positionId: ra.positionId,
+            positionName: pos?.name || '[Missing Position]',
+            role: ra.role,
+            employeeId: ra.employeeId || '',
+          });
+        });
+      }
+
+      const nextTasks = [...existingTasks, newTask];
+      const nextRaci = [...existingRaci, ...newRaciEntries];
+
+      persistDemoOverrides({
+        tasks: nextTasks,
+        raciData: nextRaci
+      });
+
       return Promise.resolve(newTask);
     }
-    
+
     const payload = {
       request: {
         name: taskDto.name,
@@ -122,10 +182,10 @@ export const taskApi = {
         raciAssignments: taskDto.raciAssignments || null,
       },
     };
-    
+
     // Debug: log payload before sending
     console.log('TASK CREATE PAYLOAD', JSON.stringify(payload, null, 2));
-    
+
     return apiRequest<Task>('/tasks', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -136,7 +196,7 @@ export const taskApi = {
     if (isDemoMode()) {
       return Promise.all(tasks.map(task => this.create(task)));
     }
-    
+
     const results: Task[] = [];
     for (const task of tasks) {
       const created = await this.create(task);
@@ -154,13 +214,14 @@ export const taskApi = {
   async update(id: string, request: UpdateTaskRequest): Promise<Task> {
     if (isDemoMode()) {
       const overrides = loadDemoOverrides();
-      const existing = overrides.tasks || [];
+      const demoData = await loadDemoData();
+      const existing = overrides.tasks || demoData.tasks || [];
       const next = existing.map((t: Task) => (t.id === id ? { ...t, ...request } : t));
       persistDemoOverrides({ tasks: next });
       const updated = next.find((t: Task) => t.id === id) as Task;
       return Promise.resolve(updated);
     }
-    
+
     // CRITICAL: Only send fields matching backend UpdateTaskDto
     const payload: Record<string, any> = {};
     if (request.name !== undefined) payload.name = request.name;
@@ -170,7 +231,7 @@ export const taskApi = {
     if (request.note !== undefined) payload.note = request.note;
     if (request.partner !== undefined) payload.partner = request.partner;
     if (request.estimatedHours !== undefined) payload.estimatedHours = request.estimatedHours;
-    
+
     return apiRequest<Task>(`/tasks/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
@@ -191,10 +252,6 @@ export const taskApi = {
   },
 
   async getAll(): Promise<Task[]> {
-    if (isDemoMode()) {
-      const overrides = loadDemoOverrides();
-      return Promise.resolve((overrides.tasks as Task[]) || []);
-    }
     return apiRequest<Task[]>('/tasks');
   },
 
@@ -222,31 +279,26 @@ export const authApi = {
   async login(
     request: LoginRequest
   ): Promise<LoginResponse> {
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('Sai tài khoản hoặc mật khẩu');
-      const text = await res.text().catch(() => '');
-      throw new Error(text || `Login failed (${res.status})`);
+    const res = await fetch('/data/users.json');
+    if (!res.ok) throw new Error('Could not load user data');
+
+    const users = await res.json();
+    const user = users.find((u: any) => u.username === request.username);
+
+    // Simple bypass: allow admin/admin or matching user (ignoring hash for simplicity)
+    if (user && (request.password === 'admin' || request.username === 'user')) {
+      const mockToken = `mock-jwt-${request.username}`;
+      setAuthToken(mockToken);
+
+      return {
+        token: mockToken,
+        username: user.username,
+        role: user.role === '1' || user.role === 'admin' ? 'admin' : 'user',
+        mustChangePassword: false,
+      };
     }
-    
-    const data = await res.json() as LoginResponse;
-    if (!data?.token) throw new Error('Missing token');
-    setAuthToken(data.token);
 
-    // Normalize role
-    const role = data.role === 'admin' || data.role === 'user' ? data.role : 'user';
-
-    return {
-      token: data.token,
-      username: data.username,
-      role,
-      mustChangePassword: !!data.mustChangePassword,
-    };
+    throw new Error('Sai tài khoản hoặc mật khẩu');
   },
 };
 
@@ -255,6 +307,9 @@ export const authApi = {
 // ============================================================================
 
 export const projectApi = {
+  async getAll(): Promise<ProjectResponse[]> {
+    return apiRequest<ProjectResponse[]>('/projects');
+  },
   /**
    * Create project - strict DTO compliance
    * CRITICAL: Uses 'customer' not 'client'
@@ -283,7 +338,7 @@ export const projectApi = {
     if (request.name !== undefined) payload.name = request.name;
     if (request.customer !== undefined) payload.customer = request.customer;
     if (request.managerId !== undefined) payload.managerId = request.managerId;
-    
+
     return apiRequest<ProjectResponse>(`/projects/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
@@ -321,13 +376,34 @@ export const raciApi = {
     if (!isValidRaciRole(request.role)) {
       throw new Error(`Invalid RACI role: ${request.role}. Must be: R, A, C, or I`);
     }
-    
+
+    if (isDemoMode()) {
+      const overrides = loadDemoOverrides();
+      const demoData = await loadDemoData();
+      const existing = overrides.raciData || demoData.raciData || [];
+      const positions = await positionApi.getAll();
+      const pos = positions.find(p => p.id === request.positionId);
+
+      const newRaci: RaciMatrix = {
+        id: `R${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        taskId: request.taskId,
+        positionId: request.positionId,
+        positionName: pos?.name || '[Missing Position]',
+        role: request.role,
+        employeeId: '', // Employee mapping happens in datastore.ts normalize logic usually
+      };
+
+      const next = [...existing, newRaci];
+      persistDemoOverrides({ raciData: next });
+      return Promise.resolve(newRaci);
+    }
+
     const payload = {
       taskId: request.taskId,
       positionId: request.positionId,
       role: request.role,
     };
-    
+
     return apiRequest<RaciMatrix>('/raci', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -345,11 +421,21 @@ export const raciApi = {
     if (!isValidRaciRole(request.role)) {
       throw new Error(`Invalid RACI role: ${request.role}. Must be: R, A, C, or I`);
     }
-    
+
+    if (isDemoMode()) {
+      const overrides = loadDemoOverrides();
+      const demoData = await loadDemoData();
+      const existing = overrides.raciData || demoData.raciData || [];
+      const next = existing.map((r: RaciMatrix) => (String(r.id) === String(id) ? { ...r, role: request.role } : r));
+      persistDemoOverrides({ raciData: next });
+      const updated = next.find((r: RaciMatrix) => String(r.id) === String(id)) as RaciMatrix;
+      return Promise.resolve(updated);
+    }
+
     const payload = {
       role: request.role, // Enum: R, A, C, I
     };
-    
+
     return apiRequest<RaciMatrix>(`/raci/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
@@ -357,12 +443,44 @@ export const raciApi = {
   },
 
   async delete(id: number | string): Promise<void> {
+    if (isDemoMode()) {
+      const overrides = loadDemoOverrides();
+      const demoData = await loadDemoData();
+      const existing = overrides.raciData || demoData.raciData || [];
+      const next = existing.filter((r: RaciMatrix) => String(r.id) !== String(id));
+      persistDemoOverrides({ raciData: next });
+      return Promise.resolve();
+    }
     return apiRequest<void>(`/raci/${id}`, {
       method: 'DELETE',
     });
   },
 
   async updateRaciForTask(taskId: string, assignments: RaciMatrix[]): Promise<RaciMatrix[]> {
+    if (isDemoMode()) {
+      const overrides = loadDemoOverrides();
+      const demoData = await loadDemoData();
+      const existing = overrides.raciData || demoData.raciData || [];
+
+      // Remove all existing RACI for this task
+      const filtered = existing.filter((r: RaciMatrix) => r.taskId !== taskId);
+
+      // Add new ones
+      const positions = await positionApi.getAll();
+      const newAssignments = assignments.map((a, idx) => {
+        const pos = positions.find(p => p.id === a.positionId);
+        return {
+          ...a,
+          id: a.id || `R${Date.now()}-${idx}`,
+          positionName: pos?.name || a.positionName || '[Missing Position]',
+        };
+      });
+
+      const next = [...filtered, ...newAssignments];
+      persistDemoOverrides({ raciData: next });
+      return Promise.resolve(newAssignments);
+    }
+
     const payload = {
       taskId,
       assignments: assignments.map(a => ({
@@ -371,7 +489,7 @@ export const raciApi = {
         employeeId: a.employeeId,
       })),
     };
-    
+
     return apiRequest<RaciMatrix[]>(`/raci/task/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
@@ -381,7 +499,7 @@ export const raciApi = {
 
 export interface CreateDepartmentRequest {
   name: string;
-  isActive: boolean;  
+  isActive: boolean;
 }
 
 export interface UpdateDepartmentRequest {
@@ -522,6 +640,13 @@ export interface CreateBootstrapManagerRequest {
   positionName: string;
 }
 
+export interface CreateEmployeeRequest {
+  name: string;
+  department: string;
+  position: string;
+  managerId?: string;
+}
+
 export interface EmployeeWithAccountDto {
   id: string;
   name: string;
@@ -550,6 +675,32 @@ export const employeeApi = {
     return apiRequest<ImportEmployeesResult>('/employees/import', {
       method: 'POST',
       body: JSON.stringify({ rows }),
+    });
+  },
+
+  /**
+   * Create a single employee (added for demo/user portal)
+   */
+  async create(request: CreateEmployeeRequest): Promise<EmployeeWithAccountDto> {
+    if (isDemoMode()) {
+      const overrides = loadDemoOverrides();
+      const existing = overrides.employees || [];
+      const newEmployee: EmployeeWithAccountDto = {
+        id: `E${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name: request.name,
+        department: request.department,
+        position: request.position,
+        managerId: request.managerId,
+        hasUserAccount: false,
+      };
+      const next = [...existing, newEmployee];
+      persistDemoOverrides({ employees: next });
+      return Promise.resolve(newEmployee);
+    }
+
+    return apiRequest<EmployeeWithAccountDto>('/employees', {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
   },
 

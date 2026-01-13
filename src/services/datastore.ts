@@ -45,10 +45,10 @@ export async function loadAll(isAdmin: boolean = true): Promise<{ employees: Emp
 
     try {
       const deptApi = await departmentApi.getAll();
-      departments = deptApi.map((d) => ({
+      departments = deptApi.map((d: any) => ({
         id: d.id,
         name: d.name,
-        active: d.isActive,
+        active: d.isActive !== undefined ? d.isActive : d.active,
       }));
     } catch (err) {
       console.warn('Failed to load departments from API, using fallback:', err);
@@ -63,11 +63,11 @@ export async function loadAll(isAdmin: boolean = true): Promise<{ employees: Emp
 
     try {
       const posApi = await positionApi.getAll();
-      positions = posApi.map((p) => ({
+      positions = posApi.map((p: any) => ({
         id: p.id,
         name: p.name,
-        canManage: p.canManage,
-        active: p.isActive,
+        canManage: p.canManage !== undefined ? p.canManage : p.isManagement,
+        active: p.isActive !== undefined ? p.isActive : p.active,
       }));
     } catch (err) {
       console.warn('Failed to load positions from API, using fallback:', err);
@@ -89,7 +89,16 @@ export async function loadAll(isAdmin: boolean = true): Promise<{ employees: Emp
     if (isDemoMode()) {
       const demo = await loadDemoData();
       const overrides = loadDemoOverrides();
-      employees = demo.employees;
+      employees = (overrides.employees || demo.employees).map((e: any) => ({
+        id: e.id,
+        name: e.name,
+        department: e.department || 'Unknown',
+        position: e.position || 'Unknown',
+        positionId: e.positionId || e.primaryPositionId || undefined,
+        primaryPositionId: e.primaryPositionId || e.positionId || undefined,
+        managerId: e.managerId || undefined,
+        username: e.username || undefined,
+      }));
       projects = (overrides.projects || demo.projects).map((p: any) => ({
         id: p.id,
         name: p.name,
@@ -108,13 +117,34 @@ export async function loadAll(isAdmin: boolean = true): Promise<{ employees: Emp
         partner: t.partner ?? null,
         partnerId: t.partnerId ?? null,
       }));
-      raciData = (overrides.raciData || demo.raciData).map((r: any, idx: number) => ({
-        id: r.id || idx,
-        taskId: r.taskId,
-        employeeId: r.employeeId,
-        role: r.role,
-      }));
-      persistDemoOverrides({ tasks, projects, raciData });
+      raciData = (overrides.raciData || demo.raciData).map((r: any, idx: number) => {
+        let positionId = r.positionId;
+        let positionName = r.positionName;
+
+        if (!positionId && r.employeeId) {
+          const emp = employees.find(e => e.id === r.employeeId);
+          if (emp) {
+            positionId = emp.primaryPositionId || emp.positionId;
+            positionName = emp.position;
+          }
+        }
+
+        // Final fallback: if we have a positionId but still no name, resolve from positions array
+        if (positionId && (!positionName || positionName.trim().length === 0)) {
+          const pos = positions.find(p => p.id === positionId);
+          if (pos) positionName = pos.name;
+        }
+
+        return {
+          id: r.id || idx,
+          taskId: r.taskId,
+          positionId,
+          positionName: positionName || '',
+          role: r.role,
+          employeeId: r.employeeId || undefined,
+        };
+      });
+      persistDemoOverrides({ tasks, projects, raciData, employees });
     } else {
       const tasksPath = isAdmin ? '/tasks' : '/tasks/my';
       const [employeesApi, projectsApi, tasksApi, raciApi] = await Promise.all([

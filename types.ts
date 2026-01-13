@@ -84,11 +84,12 @@ export enum Page {
   ADMIN_EMPLOYEES = 'admin_employees',
   ADMIN_REPORT_TASK = 'admin_report_task',
   ADMIN_REPORT_USER = 'admin_report_user',
-  
+
   // User Pages
   USER_DASHBOARD = 'user_dashboard',
   USER_MY_TASKS = 'user_my_tasks',
   USER_MY_RACI = 'user_my_raci',
   USER_PROFILE = 'user_profile',
   USER_ADD_TASK = 'user_add_task',
+  USER_EMPLOYEES = 'user_employees',
 }

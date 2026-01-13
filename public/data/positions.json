@@ -1,5 +1,13 @@
 [
   {
+    "id": "admin-position-id",
+    "name": "Admin",
+    "canManage": true,
+    "active": true,
+    "createdAt": "2026-01-01 00:00:00.000123+07",
+    "updatedAt": "2026-01-01 00:00:00.000123+07"
+  },
+  {
     "id": "a1b7177e-be8f-4227-aa1d-16f1fdc6d77b",
     "name": "Trưởng phòng CSKH 2",
     "canManage": true,
