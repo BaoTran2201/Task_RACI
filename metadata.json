@@ -1,0 +1,5 @@
+{
+  "name": "RACI HR Check",
+  "description": "An internal dashboard for managing human resources tasks, projects, and RACI matrices.",
+  "requestFramePermissions": []
+}

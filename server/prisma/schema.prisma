@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  password   String
+  role       String
+  employeeId String?  @unique
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+}
+
+model Employee {
+  id          String   @id
+  name        String
+  department  String
+  position    String
+  managerId   String?
+  manager     Employee? @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates Employee[] @relation("EmployeeManager")
+
+  user        User?
+  tasks       Task[]
+  raci        RaciAssignment[]
+}
+
+model Project {
+  id        String   @id
+  name      String
+  customer  String?
+  tasks     Task[]
+}
+
+model Task {
+  id          String   @id
+  name        String
+  groupName   String
+  frequency   String
+  note        String?
+  partner     String?
+  partnerId   String?
+  partnerRef  Partner? @relation("TaskPartner", fields: [partnerId], references: [id], onDelete: SetNull)
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  creatorId   String
+  creator     Employee @relation(fields: [creatorId], references: [id])
+
+  raci        RaciAssignment[]
+
+  createdAt   DateTime @default(now())
+
+  @@index([partnerId])
+}
+
+model Partner {
+  id             String  @id @default(cuid())
+  name           String
+  normalizedName String  @unique
+  tasks          Task[] @relation("TaskPartner")
+}
+
+model RaciAssignment {
+  id          Int      @id @default(autoincrement())
+  taskId      String
+  employeeId  String
+  role        String
+
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, employeeId])
+}

@@ -1,0 +1,12 @@
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+warn: CheckRaci.Application.Services.AuthService[0]
+      Invalid password for user: admin
+warn: CheckRaci.Application.Services.AuthService[0]
+      Invalid password for user: admin
+warn: CheckRaci.Application.Services.AuthService[0]
+      Invalid password for user: admin
+warn: CheckRaci.Application.Services.AuthService[0]
+      Invalid password for user: admin
+warn: CheckRaci.Application.Services.AuthService[0]
+      Invalid password for user: admin

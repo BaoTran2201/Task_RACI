@@ -1,0 +1,6 @@
+C:\Users\PC\Check_RACI\obj\Debug\net8.0\ApplyMigrationDirect.csproj.AssemblyReference.cache
+C:\Users\PC\Check_RACI\obj\Debug\net8.0\ApplyMigrationDirect.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\PC\Check_RACI\obj\Debug\net8.0\ApplyMigrationDirect.AssemblyInfoInputs.cache
+C:\Users\PC\Check_RACI\obj\Debug\net8.0\ApplyMigrationDirect.AssemblyInfo.cs
+C:\Users\PC\Check_RACI\obj\Debug\net8.0\ApplyMigrationDirect.csproj.CoreCompileInputs.cache
+C:\Users\PC\Check_RACI\obj\Debug\net8.0\ApplyMigrationDirect.sourcelink.json
